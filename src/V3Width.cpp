@@ -538,7 +538,7 @@ private:
                 || VN_IS(vdtypep, DynArrayDType)  //
                 || VN_IS(vdtypep, QueueDType)) {
                 nodep->v3warn(E_UNSUPPORTED, "Unsupported: Concatenation to form "
-                                                 << vdtypep->prettyDTypeNameQ() << "data type");
+                                                 << vdtypep->prettyDTypeNameQ() << " data type");
             }
 
             iterateCheckSizedSelf(nodep, "LHS", nodep->lhsp(), SELF, BOTH);
@@ -5808,7 +5808,8 @@ private:
                     "Node has no type");  // Perhaps forgot to do a prelim visit on it?
         //
         // For DOUBLE under a logical op, add implied test against zero, never a warning
-        if (underp && underp->isDouble()) {
+        AstNodeDType* const underVDTypep = underp ? underp->dtypep()->skipRefp() : nullptr;
+        if (underp && underVDTypep->isDouble()) {
             UINFO(6, "   spliceCvtCmpD0: " << underp << endl);
             VNRelinker linker;
             underp->unlinkFrBack(&linker);
@@ -5816,13 +5817,12 @@ private:
                 = new AstNeqD(nodep->fileline(), underp,
                               new AstConst(nodep->fileline(), AstConst::RealDouble(), 0.0));
             linker.relink(newp);
-        } else if (VN_IS(underp->dtypep(), ClassRefDType)
-                   || (VN_IS(underp->dtypep(), BasicDType)
-                       && VN_AS(underp->dtypep(), BasicDType)->keyword()
-                              == VBasicDTypeKwd::CHANDLE)) {
+        } else if (VN_IS(underVDTypep, ClassRefDType)
+                   || (VN_IS(underVDTypep, BasicDType)
+                       && VN_AS(underVDTypep, BasicDType)->keyword() == VBasicDTypeKwd::CHANDLE)) {
             // Allow warning-free "if (handle)"
             VL_DO_DANGLING(fixWidthReduce(underp), underp);  // Changed
-        } else if (!underp->dtypep()->basicp()) {
+        } else if (!underVDTypep->basicp()) {
             nodep->v3error("Logical operator " << nodep->prettyTypeName()
                                                << " expects a non-complex data type on the "
                                                << side << ".");
